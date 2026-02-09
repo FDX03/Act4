@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Dashboard</title>
+</head>
+<body>
+
+  <h2>Iniciar sesión</h2>
+
+  <form id="loginForm">
+    <input type="text" id="username" placeholder="Usuario" required><br><br>
+    <input type="password" id="password" placeholder="Contraseña" required><br><br>
+    <button type="submit">Entrar</button>
+  </form>
+
+  <hr>
+
+  <div id="dashboard" style="display:none;">
+    <h2>Proyectos</h2>
+    <ul id="projects"></ul>
+
+    <h2>Productos</h2>
+    <ul id="products"></ul>
+  </div>
+
+  <script>
+    const form = document.getElementById("loginForm");
+    const dashboard = document.getElementById("dashboard");
+    const projectsList = document.getElementById("projects");
+    const productsList = document.getElementById("products");
+
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+
+      const username = document.getElementById("username").value;
+      const password = document.getElementById("password").value;
+
+      const res = await fetch("/api/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ username, password })
+      });
+
+      const data = await res.json();
+
+      if (!data.token) {
+        alert("Error de autenticación");
+        return;
+      }
+
+      localStorage.setItem("token", data.token);
+      alert("Login exitoso");
+
+      form.style.display = "none";
+      dashboard.style.display = "block";
+
+      cargarProyectos();
+    });
+
+    async function cargarProyectos() {
+      const token = localStorage.getItem("token");
+
+      const res = await fetch("/api/projects", {
+        headers: {
+          "Authorization": "Bearer " + token
+        }
+      });
+
+      const projects = await res.json();
+      projectsList.innerHTML = "";
+
+      projects.forEach(p => {
+        const li = document.createElement("li");
+        li.textContent = p.name;
+        li.style.cursor = "pointer";
+
+        li.onclick = () => cargarProductos(p._id);
+
+        projectsList.appendChild(li);
+      });
+    }
+
+    async function cargarProductos(projectId) {
+      const token = localStorage.getItem("token");
+
+      const res = await fetch(`/api/products/${projectId}`, {
+        headers: {
+          "Authorization": "Bearer " + token
+        }
+      });
+
+      const products = await res.json();
+      productsList.innerHTML = "";
+
+      products.forEach(prod => {
+        const li = document.createElement("li");
+        li.textContent = `${prod.name} - $${prod.price} (stock: ${prod.stock})`;
+        productsList.appendChild(li);
+      });
+    }
+  </script>
+
+</body>
+</html>
